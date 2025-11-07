@@ -1,8 +1,8 @@
 import { ActivityType, Events } from "discord.js";
-import { LoadCommands } from "@Handlers/CommandHandler";
-import { LoadFunctions } from "@Handlers/FunctionHandler";
-import { LoadButtons } from "@Handlers/ButtonHandler";
-import { LoadMenu } from "@Handlers/MenuHandler";
+import { LoadCommands } from "../../Handlers/CommandHandler";
+import { LoadFunctions } from "../../Handlers/FunctionHandler";
+import { LoadButtons } from "../../Handlers/ButtonHandler";
+import LoadMenu from "../../Handlers/MenuHandler"; // ✅ AQUÍ CORREGIDO
 import chalk from "chalk";
 import mongoose from "mongoose";
 import ora from "ora";
@@ -14,8 +14,8 @@ export default {
    */
   async execute(client) {
     const Activities = [
-      { name: "Protección Civil", type: ActivityType.Watching },
-      { name: "Recuerda seguir los deberes..", type: ActivityType.Playing },
+      { name: "SSPC", type: ActivityType.Watching },
+      { name: "MXRP", type: ActivityType.Playing },
     ];
 
     const SelectActivity = () =>
@@ -27,7 +27,7 @@ export default {
       await LoadCommands(client);
       await LoadFunctions(client);
       await LoadButtons(client);
-      await LoadMenu(client);
+      await LoadMenu(client); // ✅ Esto ahora funciona correctamente
       await mongoose.connect(process.env.MongoURI);
       dbSpinner.succeed(chalk.green("MongoDB conectado correctamente."));
     } catch (error) {
