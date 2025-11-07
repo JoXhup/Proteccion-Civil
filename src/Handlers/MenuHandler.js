@@ -8,22 +8,22 @@ import Table from "cli-table3";
 async function LoadMenu(client) {
   client.menus = new Map();
 
-  const spinner = ora("🔍 Buscando menús en /src/Utils/Menus...").start();
+  const spinner = ora("🔍 Buscando menús en /src/Utils/Menu...").start();
   const loadTimes = [];
   const menusArray = [];
   const failedMenus = [];
 
   try {
     // ✅ Ruta absoluta garantizada
-    const folderPath = path.join(process.cwd(), "src", "Utils", "Menus");
+    const folderPath = path.join(process.cwd(), "src", "Utils", "Menu");
     const files = await LoadFiles(folderPath);
 
     if (!files || files.length === 0) {
-      spinner.warn("⚠️ No se encontraron menús en /src/Utils/Menus.");
+      spinner.warn("⚠️ No se encontraron menús en /src/Utils/Mens.");
       return;
     }
 
-    spinner.text = `📦 Cargando ${files.length} menús...`;
+    spinner.text = `📦 Cargando ${files.length} menú...`;
 
     const table = new Table({
       head: [
