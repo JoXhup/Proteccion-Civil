@@ -8,7 +8,7 @@ import {
 
 import chalk from "chalk";
 
-import { writeLog } from "@Utils/Logs/Logger";
+import { writeLog } from "@Utils/Logger";
 
 const formatCooldown = (seconds) => {
   const units = [
