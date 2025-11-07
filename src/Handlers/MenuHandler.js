@@ -1,151 +1,50 @@
-import { LoadFiles } from "../Functions/FileLoader.js";
-import { pathToFileURL } from "url";
+import { readdirSync } from "fs";
 import path from "path";
 import chalk from "chalk";
 import ora from "ora";
-import Table from "cli-table3";
 
-async function LoadMenu(client) {
+/**
+ * Carga menús personalizados (SelectMenus, contextuales o similares)
+ * desde /src/Utils/Menus/
+ */
+export default async function LoadMenu(client) {
   client.menus = new Map();
 
-  const spinner = ora("🔍 Buscando menús en /src/Utils/Menu...").start();
-  const loadTimes = [];
-  const menusArray = [];
-  const failedMenus = [];
+  const folderPath = path.join(process.cwd(), "src", "Utils", "Menus");
+  const spinner = ora("🔍 Buscando menús en /src/Utils/Menus...").start();
 
   try {
-    // ✅ Ruta absoluta garantizada
-    const folderPath = path.join(process.cwd(), "src", "Utils", "Menu");
-    const files = await LoadFiles(folderPath);
+    const files = readdirSync(folderPath).filter(f => f.endsWith(".js"));
 
-    if (!files || files.length === 0) {
-      spinner.warn("⚠️ No se encontraron menús en /src/Utils/Mens.");
+    if (files.length === 0) {
+      spinner.warn("⚠️ No se encontraron menús en /src/Utils/Menus.");
+      console.log(chalk.yellow("✔ No hay menús que cargar."));
       return;
     }
 
-    spinner.text = `📦 Cargando ${files.length} menú...`;
+    spinner.text = `📦 Cargando ${files.length} menú(s)...`;
 
-    const table = new Table({
-      head: [
-        chalk.gray("ID"),
-        chalk.cyan("Menú"),
-        chalk.green("Estado"),
-        chalk.yellow("Tiempo (ms)"),
-      ],
-      style: { head: [], border: [] },
-      chars: {
-        top: "═",
-        topMid: "╤",
-        topLeft: "╔",
-        topRight: "╗",
-        bottom: "═",
-        bottomMid: "╧",
-        bottomLeft: "╚",
-        bottomRight: "╝",
-        left: "║",
-        leftMid: "╟",
-        mid: "─",
-        midMid: "┼",
-        right: "║",
-        rightMid: "╢",
-        middle: "│",
-      },
-    });
+    for (const file of files) {
+      const menuPath = path.join(folderPath, file);
+      try {
+        const menuModule = await import(`file://${menuPath}`);
+        const menu = menuModule.default || menuModule;
 
-    for (const [index, file] of files.entries()) {
-      const start = process.hrtime();
-      const menu = await loadMenu(client, file);
-      const [seconds, nanoseconds] = process.hrtime(start);
-      const loadTime = (seconds * 1000 + nanoseconds / 1e6).toFixed(2);
-      const status = menu.status ? chalk.green("✅") : chalk.red("❌");
+        if (!menu?.name || typeof menu.execute !== "function") {
+          console.warn(chalk.yellow(`⚠️ Menú inválido o sin execute(): ${file}`));
+          continue;
+        }
 
-      loadTimes.push({ menuName: menu.name, loadTime: parseFloat(loadTime) });
-
-      if (menu.status) {
-        menusArray.push(menu);
-      } else {
-        failedMenus.push(menu);
+        client.menus.set(menu.name, menu);
+        console.log(chalk.green(`✅ Menú cargado: ${menu.name}`));
+      } catch (err) {
+        console.error(chalk.red(`❌ Error cargando menú ${file}:`), err);
       }
-
-      table.push([
-        chalk.gray(`${index + 1}.`),
-        chalk.white(menu.name || "Menú Desconocido"),
-        status,
-        parseFloat(loadTime) > 100
-          ? chalk.red(`${loadTime} ms`)
-          : parseFloat(loadTime) > 20
-          ? chalk.yellow(`${loadTime} ms`)
-          : chalk.green(`${loadTime} ms`),
-      ]);
     }
 
     spinner.succeed("✅ Menús cargados correctamente.");
-    console.log(chalk.bold("\n📋 Tabla resumen de menús:"));
-    console.log(table.toString());
-
-    if (loadTimes.length > 0) {
-      const successful = menusArray.filter((m) => m.status);
-      const slowestMenu = loadTimes.reduce((prev, current) =>
-        prev.loadTime > current.loadTime ? prev : current
-      );
-      const averageTime =
-        successful.reduce((sum, { loadTime }) => sum + loadTime, 0) /
-        successful.length;
-
-      console.log(chalk.yellow("\n📊 Estadísticas de carga:"));
-      console.log(
-        chalk.magenta(
-          `Menú más lento: ${slowestMenu.menuName} (${slowestMenu.loadTime.toFixed(2)} ms)`
-        )
-      );
-      console.log(
-        chalk.blue(`Tiempo promedio de carga: ${averageTime.toFixed(2)} ms`)
-      );
-      console.log(
-        chalk.blue(
-          `Menús cargados correctamente: ${menusArray.length}/${files.length}`
-        )
-      );
-      console.log(
-        chalk.red(`Menús con errores: ${failedMenus.length}/${files.length}`)
-      );
-    } else {
-      console.log(chalk.yellow("⚠️ No se cargaron menús válidos."));
-    }
   } catch (error) {
-    spinner.fail("❌ Ocurrió un error al cargar los menús.");
-    console.error(chalk.red("Error cargando menús:"), error);
+    spinner.fail("❌ Error al cargar los menús.");
+    console.error(chalk.red("Detalles:"), error);
   }
 }
-
-async function loadMenu(client, file) {
-  try {
-    const menuModule = await import(pathToFileURL(file).href);
-    const menu = menuModule.default || menuModule;
-
-    // ⚙️ Validaciones de seguridad y estabilidad
-    if (!menu || typeof menu !== "object") {
-      console.warn(`⚠️ Archivo inválido en ${file}.`);
-      return { name: path.basename(file), status: false };
-    }
-
-    if (!menu.name || typeof menu.name !== "string") {
-      console.warn(`⚠️ El menú en ${file} no tiene un nombre válido.`);
-      return { name: path.basename(file), status: false };
-    }
-
-    if (typeof menu.execute !== "function") {
-      console.warn(`⚠️ El menú "${menu.name}" no tiene función execute().`);
-      return { name: menu.name, status: false };
-    }
-
-    // 🧩 Registro seguro
-    client.menus.set(menu.name, menu);
-    return { name: menu.name, status: true };
-  } catch (error) {
-    console.error(chalk.red(`❌ Error cargando menú desde ${file}:`), error);
-    return { name: path.basename(file), status: false };
-  }
-}
-
-export default LoadMenu;

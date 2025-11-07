@@ -6,7 +6,7 @@ import {
     EmbedBuilder,
 } from "discord.js";
 // 💡 Importar la configuración centralizada de tickets
-import { TICKET_CONFIG } from "../../Utils/Menu/ticket.js";
+import { TICKET_CONFIG } from "../../Utils/Menus/ticket.js";
 
 export const data = new SlashCommandBuilder()
     .setName("tickets")

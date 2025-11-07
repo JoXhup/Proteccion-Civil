@@ -1,67 +1,86 @@
-// interactionCreate.js
-
 export default {
-    name: "interactionCreate",
-    async execute(interaction, client) {
-        
-        // --- 1. Manejo de Comandos Slash ---
-        if (interaction.isCommand()) {
-            const command = client.commands.get(interaction.commandName); 
+  name: "interactionCreate",
+  async execute(interaction, client) {
 
-            if (!command) {
-                if (!interaction.replied) {
-                   return interaction.reply({ content: "🚫 Este comando no está registrado.", ephemeral: true }).catch(() => {});
-                }
-                return;
-            }
+    // --- 1. Manejo de Comandos Slash ---
+    if (interaction.isCommand()) {
+      const command = client.commands.get(interaction.commandName);
 
-            try {
-                // El comando verificar.js maneja su propia respuesta (reply)
-                await command.execute(interaction, client);
-            } catch (error) {
-                console.error(`❌ Error al ejecutar el comando ${interaction.commandName}:`, error);
-                
-                // Intenta responder o editar si ya se hizo defer
-                const content = "⚠️ Ocurrió un error al ejecutar este comando.";
-                if (interaction.deferred || interaction.replied) {
-                    await interaction.editReply({ content: content, ephemeral: true }).catch(() => {});
-                } else {
-                    await interaction.reply({ content: content, ephemeral: true }).catch(() => {});
-                }
-            }
+      if (!command) {
+        if (!interaction.replied) {
+          return interaction.reply({
+            content: "🚫 Este comando no está registrado.",
+            ephemeral: true,
+          }).catch(() => {});
+        }
+        return;
+      }
+
+      try {
+        await command.execute(interaction, client);
+      } catch (error) {
+        console.error(`❌ Error al ejecutar el comando ${interaction.commandName}:`, error);
+        const msg = "⚠️ Ocurrió un error al ejecutar este comando.";
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({ content: msg }).catch(() => {});
+        } else {
+          await interaction.reply({ content: msg, ephemeral: true }).catch(() => {});
+        }
+      }
+    }
+
+    // --- 2. Manejo de Botones ---
+    else if (interaction.isButton()) {
+      const button = client.buttons.get(interaction.customId);
+
+      if (!button) {
+        if (!interaction.replied) {
+          return interaction.reply({
+            content: "⚠️ Botón no encontrado o expirado.",
+            ephemeral: true,
+          }).catch(() => {});
+        }
+        return;
+      }
+
+      try {
+        if (!interaction.deferred && !interaction.replied) {
+          await interaction.deferReply({ ephemeral: true });
         }
 
-        // --- 2. Manejo de Botones (Verificación) ---
-        else if (interaction.isButton()) {
-            const buttonHandler = client.buttons.get(interaction.customId); 
-
-            if (!buttonHandler) {
-                if (!interaction.replied) {
-                    return interaction.reply({ content: "🚫 Error interno: Manejador de botón no encontrado.", ephemeral: true }).catch(() => {});
-                }
-                return;
-            }
-
-            try {
-                // APLAZAR RESPUESTA (DEFER REPLY): CRUCIAL
-                // Solo ejecuta deferReply si aún no ha sido respondida o diferida.
-                if (!interaction.deferred && !interaction.replied) {
-                    await interaction.deferReply({ ephemeral: true }); 
-                }
-
-                // Ejecutar la lógica del botón (iniciar.js)
-                await buttonHandler.execute(interaction, client);
-
-            } catch (error) {
-                console.error(`❌ Error al ejecutar el botón ${interaction.customId}:`, error);
-                
-                // Si hay un error, usar editReply si es posible.
-                if (interaction.deferred || interaction.replied) {
-                    await interaction.editReply({
-                        content: "⚠️ Ocurrió un error inesperado al procesar la verificación.",
-                    }).catch(() => {});
-                }
-            }
+        await button.execute(interaction, client);
+      } catch (error) {
+        console.error(`❌ Error al ejecutar botón ${interaction.customId}:`, error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({
+            content: "⚠️ Error al ejecutar el botón.",
+          }).catch(() => {});
         }
-    },
+      }
+    }
+
+    // --- 3. Manejo de SelectMenus (menús desplegables) ---
+    else if (interaction.isStringSelectMenu()) {
+      const menu = client.selectMenus?.get(interaction.customId) || client.menus?.get(interaction.customId);
+
+      if (!menu) {
+        console.warn(`⚠️ Menú no encontrado: ${interaction.customId}`);
+        return interaction.reply({
+          content: "⚠️ Menú no encontrado o expirado.",
+          ephemeral: true,
+        }).catch(() => {});
+      }
+
+      try {
+        await menu.execute(interaction, client);
+      } catch (error) {
+        console.error(`❌ Error ejecutando menú ${interaction.customId}:`, error);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({ content: "⚠️ Error al ejecutar el menú." }).catch(() => {});
+        } else {
+          await interaction.reply({ content: "⚠️ Error al ejecutar el menú.", ephemeral: true }).catch(() => {});
+        }
+      }
+    }
+  },
 };
