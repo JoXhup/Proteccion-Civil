@@ -13,7 +13,7 @@ import {
 } from "discord.js";
 import { createTranscript } from "discord-html-transcripts";
 // RUTA CORREGIDA (Mantén esta ruta si ticket.js está en ../../Utils/Menu/)
-import { TICKET_CONFIG } from "../../Utils/Menu/ticket.js"; 
+import { TICKET_CONFIG } from "../../Utils/Menus/ticket.js"; 
 
 
 // ----------------------------------------------------------------------
