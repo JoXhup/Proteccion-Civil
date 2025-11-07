@@ -1,4 +1,4 @@
-import { LoadFiles } from "@Functions/FileLoader";
+import { LoadFiles } from "../Functions/FileLoader.js";
 import { pathToFileURL } from "url";
 import chalk from "chalk";
 import ora from "ora";
@@ -7,13 +7,13 @@ import Table from "cli-table3";
 async function LoadMenu(client) {
   client.menus = new Map();
 
-  const spinner = ora("Buscando menús en /src/Utils/Menu...").start();
+  const spinner = ora("Buscando menús en /src/Utils/Menus...").start();
   const loadTimes = [];
   const menusArray = [];
   const failedMenus = [];
 
   try {
-    const files = await LoadFiles("/src/Utils/Menu");
+    const files = await LoadFiles("/src/Utils/Menus");
 
     if (files.length === 0) {
       spinner.warn("No se encontraron menús.");
@@ -71,12 +71,12 @@ async function LoadMenu(client) {
         parseFloat(loadTime) > 100
           ? chalk.red(`${loadTime} ms`)
           : parseFloat(loadTime) > 20
-            ? chalk.yellow(`${loadTime} ms`)
-            : chalk.green(`${loadTime} ms`),
+          ? chalk.yellow(`${loadTime} ms`)
+          : chalk.green(`${loadTime} ms`),
       ]);
     }
 
-    spinner.succeed("Menús cargados correctamente.");
+    spinner.succeed("✅ Menús cargados correctamente.");
     console.log(chalk.bold("\n📋 Tabla resumen de menús:"));
     console.log(table.toString());
 
@@ -92,26 +92,21 @@ async function LoadMenu(client) {
       console.log(chalk.yellow("\n📊 Estadísticas de carga:"));
       console.log(
         chalk.magenta(
-          `Menú más lento: ${
-            slowestMenu.menuName
-          } (${slowestMenu.loadTime.toFixed(2)} ms)`
+          `Menú más lento: ${slowestMenu.menuName} (${slowestMenu.loadTime.toFixed(2)} ms)`
         )
       );
       console.log(
         chalk.blue(`Tiempo promedio de carga: ${averageTime.toFixed(2)} ms`)
       );
-      const totalMenus = menusArray.length + failedMenus.length;
-      const loadedMenus = menusArray.length;
-      const failedCount = failedMenus.length;
       console.log(
-        chalk.blue(`Menús cargados correctamente: ${loadedMenus}/${totalMenus}`)
+        chalk.blue(`Menús cargados correctamente: ${menusArray.length}/${files.length}`)
       );
-      console.log(chalk.red(`Menús con errores: ${failedCount}/${totalMenus}`));
+      console.log(chalk.red(`Menús con errores: ${failedMenus.length}/${files.length}`));
     } else {
       console.log(chalk.yellow("No se cargaron menús."));
     }
   } catch (error) {
-    spinner.fail("Ocurrió un error al cargar los menús.");
+    spinner.fail("❌ Ocurrió un error al cargar los menús.");
     console.error(chalk.red("Error loading menus:"), error);
   }
 }
@@ -125,13 +120,13 @@ async function loadMenu(client, file) {
       client.menus.set(menu.name, menu);
       return { name: menu.name, status: true };
     } else {
-      console.warn(`El módulo ${file} no exporta un nombre válido.`);
+      console.warn(`⚠️ El módulo ${file} no exporta un nombre válido.`);
       return { name: "Unknown Menu", status: false };
     }
   } catch (error) {
-    console.error(chalk.red(`Error loading menu from ${file}:`), error);
+    console.error(chalk.red(`❌ Error loading menu from ${file}:`), error);
     return { name: "Unknown Menu", status: false };
   }
 }
 
-export { LoadMenu };
+export default LoadMenu;
