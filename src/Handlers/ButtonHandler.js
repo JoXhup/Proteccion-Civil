@@ -1,4 +1,4 @@
-import { LoadFiles } from "@Functions/FileLoader";
+import { LoadFiles } from "../Functions/FileLoader.js";
 import { pathToFileURL } from "url";
 import chalk from "chalk";
 import ora from "ora";

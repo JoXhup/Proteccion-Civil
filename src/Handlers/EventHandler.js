@@ -1,9 +1,9 @@
-import { LoadFiles } from "@Functions/FileLoader";
+import { LoadFiles } from "../Functions/FileLoader.js";
 import { pathToFileURL } from "url";
 import chalk from "chalk";
 import Table from "cli-table3";
 import ora from "ora";
-import { writeLog } from "@Utils/Logs/Logger";
+import { writeLog } from "../Utils/Logger.js";
 
 async function LoadEvents(client) {
   client.events = new Map();

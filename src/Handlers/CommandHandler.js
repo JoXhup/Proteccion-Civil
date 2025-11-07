@@ -4,7 +4,7 @@ import { LoadFiles } from "../Functions/FileLoader.js";
 import ora from "ora";
 import chalk from "chalk";
 import Table from "cli-table3";
-import { writeLog } from "@Utils/Logs/Logger";
+import { writeLog } from "../Utils/Logger.js";
 
 async function LoadCommands(client) {
   client.commands = new Map();
@@ -80,8 +80,8 @@ async function LoadCommands(client) {
         parseFloat(ms) > 100
           ? chalk.red(`${ms} ms`)
           : parseFloat(ms) > 20
-            ? chalk.yellow(`${ms} ms`)
-            : chalk.green(`${ms} ms`),
+          ? chalk.yellow(`${ms} ms`)
+          : chalk.green(`${ms} ms`),
       ]);
     }
 
@@ -113,7 +113,7 @@ async function LoadCommands(client) {
     const lines = [];
 
     lines.push("╔══════════════════════════════════════╗");
-    lines.push("║   REGISTRO DE CARGA DE COMANDOS     ║");
+    lines.push("║   REGISTRO DE CARGA DE COMANDOS      ║");
     lines.push("╚══════════════════════════════════════╝");
     lines.push(`Fecha: ${new Date().toLocaleString()}`);
     lines.push(`Total de comandos encontrados: ${files.length}`);
