@@ -6,7 +6,7 @@ import chalk from "chalk";
 import Table from "cli-table3";
 import { writeLog } from "../Utils/Logger.js";
 
-async function LoadCommands(client) {
+export async function LoadCommands(client) {
   client.commands = new Map();
   client.subCommands = new Map();
 
@@ -16,11 +16,12 @@ async function LoadCommands(client) {
   const failedCommands = [];
 
   try {
-    const files = await LoadFiles("/src/Commands/");
+    // ✅ Asegurar ruta relativa correcta
+    const files = await LoadFiles("./src/Commands/");
 
-    if (files.length === 0) {
-      spinner.warn("No se encontraron comandos.");
-      return;
+    if (!files || files.length === 0) {
+      spinner.warn("⚠️ No se encontraron comandos.");
+      return 0;
     }
 
     spinner.text = `Cargando ${files.length} comandos...`;
@@ -85,9 +86,14 @@ async function LoadCommands(client) {
       ]);
     }
 
-    spinner.succeed("Comandos cargados correctamente.");
+    spinner.succeed("✅ Comandos cargados correctamente.");
     console.log(chalk.bold("\n📋 Tabla resumen de comandos:"));
     console.log(table.toString());
+
+    if (commandsArray.length === 0) {
+      console.log(chalk.red("⚠️ No hay comandos válidos para registrar."));
+      return 0;
+    }
 
     const successful = loadTimes.filter((c) => c.status);
     const slowest = successful.reduce((a, b) =>
@@ -111,47 +117,27 @@ async function LoadCommands(client) {
 
     // === Guardar Log ===
     const lines = [];
-
     lines.push("╔══════════════════════════════════════╗");
     lines.push("║   REGISTRO DE CARGA DE COMANDOS      ║");
     lines.push("╚══════════════════════════════════════╝");
     lines.push(`Fecha: ${new Date().toLocaleString()}`);
-    lines.push(`Total de comandos encontrados: ${files.length}`);
+    lines.push(`Total: ${files.length}`);
     lines.push(
       `Correctos: ${successful.length} | Fallidos: ${failedCommands.length}\n`
     );
-
-    lines.push("=== Comandos cargados correctamente ===");
-    successful.forEach((c, i) => {
-      lines.push(
-        `${i + 1}. ${c.commandName} - ${c.loadTime.toFixed(2)} ms - Estado: ✅`
-      );
-    });
-
-    if (failedCommands.length > 0) {
-      lines.push("\n=== Comandos con errores de carga ===");
-      failedCommands.forEach((c, i) => {
-        lines.push(`${i + 1}. ${c.name} - Estado: ❌`);
-      });
-    }
-
-    lines.push("\n=== Estadísticas ===");
-    lines.push(
-      `Comando más lento: ${slowest.commandName} (${slowest.loadTime.toFixed(
-        2
-      )} ms)`
-    );
-    lines.push(`Tiempo promedio de carga: ${average.toFixed(2)} ms`);
-
     writeLog(`command-log-${Date.now()}.log`, lines.join("\n"));
 
+    // ✅ Actualizar slash commands
     await updateApplicationCommands(
       client,
       commandsArray.filter((c) => !c.subCommand)
     );
+
+    return commandsArray.length;
   } catch (err) {
-    spinner.fail("Ocurrió un error al cargar los comandos.");
+    spinner.fail("❌ Error al cargar comandos.");
     console.error(chalk.redBright(`[Error] ${err.message}`));
+    return 0;
   }
 }
 
@@ -166,7 +152,7 @@ async function loadCommand(client, file) {
       return handleMainCommand(client, command);
     }
   } catch (error) {
-    console.error(chalk.red(`Error cargando comando desde ${file}:`), error);
+    console.error(chalk.red(`❌ Error cargando comando desde ${file}:`), error);
     return { name: "Comando desconocido", status: false };
   }
 }
@@ -185,6 +171,10 @@ function handleSubCommand(client, command) {
 }
 
 function handleMainCommand(client, command) {
+  if (!command?.data?.name) {
+    return { name: "Sin nombre", status: false };
+  }
+
   client.commands.set(command.data.name, command);
   return {
     ...command.data.toJSON(),
@@ -204,7 +194,8 @@ function getCommandEnvironment(command) {
 }
 
 async function updateApplicationCommands(client, commandsArray) {
-  const rest = new REST().setToken(process.env.Token);
+  const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
+
   const guildIds = {
     dev: process.env.Developer,
     main: process.env.Main,
@@ -224,29 +215,23 @@ async function updateApplicationCommands(client, commandsArray) {
         (cmd) => filter(cmd) && cmd.name !== "Comando desconocido"
       );
 
-      if (commands.length > 0) {
-        const guildId = guildIds[type] || null;
-        const route = guildId
-          ? Routes.applicationGuildCommands(client.user.id, guildId)
-          : Routes.applicationCommands(client.user.id);
+      if (commands.length === 0) return;
 
-        try {
-          await rest.put(route, { body: commands });
-          console.log(
-            chalk.green(`✅ Comandos ${type} actualizados exitosamente.`)
-          );
-        } catch (error) {
-          console.error(
-            chalk.red(
-              `❌ Error al actualizar comandos ${type}: ${error.message}`
-            )
-          );
-        }
+      const guildId = guildIds[type] || null;
+      const route = guildId
+        ? Routes.applicationGuildCommands(client.user.id, guildId)
+        : Routes.applicationCommands(client.user.id);
+
+      try {
+        await rest.put(route, { body: commands });
+        console.log(chalk.green(`✅ Comandos ${type} actualizados.`));
+      } catch (error) {
+        console.error(
+          chalk.red(`❌ Error al actualizar comandos ${type}: ${error.message}`)
+        );
       }
     }
   );
 
   await Promise.all(updatePromises);
 }
-
-export { LoadCommands };
