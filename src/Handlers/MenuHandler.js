@@ -14,7 +14,7 @@ async function LoadMenu(client) {
   const failedMenus = [];
 
   try {
-    // ✅ Asegura ruta absoluta correcta
+    // ✅ Ruta absoluta garantizada
     const folderPath = path.join(process.cwd(), "src", "Utils", "Menus");
     const files = await LoadFiles(folderPath);
 
@@ -123,13 +123,25 @@ async function loadMenu(client, file) {
     const menuModule = await import(pathToFileURL(file).href);
     const menu = menuModule.default || menuModule;
 
-    if (menu.name && typeof menu.execute === "function") {
-      client.menus.set(menu.name, menu);
-      return { name: menu.name, status: true };
-    } else {
-      console.warn(`⚠️ El menú en ${file} no exporta propiedades válidas.`);
+    // ⚙️ Validaciones de seguridad y estabilidad
+    if (!menu || typeof menu !== "object") {
+      console.warn(`⚠️ Archivo inválido en ${file}.`);
       return { name: path.basename(file), status: false };
     }
+
+    if (!menu.name || typeof menu.name !== "string") {
+      console.warn(`⚠️ El menú en ${file} no tiene un nombre válido.`);
+      return { name: path.basename(file), status: false };
+    }
+
+    if (typeof menu.execute !== "function") {
+      console.warn(`⚠️ El menú "${menu.name}" no tiene función execute().`);
+      return { name: menu.name, status: false };
+    }
+
+    // 🧩 Registro seguro
+    client.menus.set(menu.name, menu);
+    return { name: menu.name, status: true };
   } catch (error) {
     console.error(chalk.red(`❌ Error cargando menú desde ${file}:`), error);
     return { name: path.basename(file), status: false };
